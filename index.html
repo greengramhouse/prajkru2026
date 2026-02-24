@@ -50,7 +50,7 @@
     <nav class="no-print fixed w-full z-50 top-0 bg-black/90 border-b border-[#333] px-6 py-3 flex justify-between items-center shadow-lg backdrop-blur-md">
         <div class="flex items-center gap-3 select-none cursor-pointer hover:opacity-80 transition" onclick="window.adminLogin()" title="Click to Admin Login">
             <h1 class="text-2xl font-black italic text-gold-lux uppercase tracking-wider">PRAJKRU 2026</h1>
-            <span class="text-[10px] text-gray-500 uppercase tracking-[0.2em] border-l border-gray-600 pl-3">Register</span>
+            <span class="text-[10px] text-gray-500 uppercase tracking-[0.2em] border-l border-gray-600 pl-3">Firebase</span>
         </div>
         <div class="flex items-center gap-2 bg-black/50 border border-gray-800 px-3 py-1 rounded-full">
             <span id="cloudStatusDot" class="status-dot st-syncing"></span>
@@ -65,7 +65,7 @@
 
     <div id="loadingOverlay" class="fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center">
         <div class="spinner mb-6"></div>
-        <p id="loadingText" class="text-gold-lux uppercase tracking-[0.2em] text-lg font-bold animate-pulse">Connecting to Database...</p>
+        <p id="loadingText" class="text-gold-lux uppercase tracking-[0.2em] text-lg font-bold animate-pulse">Connecting to Firebase...</p>
     </div>
 
     <!-- GUEST MODE -->
@@ -137,6 +137,7 @@
                                 <span class="text-[10px] text-gray-500 uppercase">Paid: <span id="admPaidVal" class="text-green-500 font-bold text-sm">0</span></span>
                                 <span class="text-[10px] text-gray-500 uppercase">Bal: <span id="admBalVal" class="text-red-500 font-bold text-sm">0</span></span>
                             </div>
+                            <!-- แก้ไขปุ่มเพื่อใช้ SweetAlert2 แทน Modal HTML -->
                             <button onclick="window.openPayModal()" class="w-full mt-3 py-2 text-green-500 text-[10px] border border-green-800 rounded-lg uppercase font-bold hover:bg-green-900/20 transition">+ Add Payment (รับเงินเพิ่ม)</button>
                         </div>
                         <button onclick="window.saveMasterData()" class="w-full btn-gold py-3 rounded-xl uppercase text-sm font-black shadow-lg tracking-wider mt-2">SAVE TO FIREBASE</button>
@@ -150,9 +151,7 @@
                     <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="window.processExcelFile(this)">
                     
                     <div class="grid grid-cols-2 gap-2 mt-3">
-                        <!-- ปุ่มดาวน์โหลด Template เพิ่มเข้ามาใหม่ -->
                         <button onclick="window.downloadTemplate()" class="col-span-2 text-emerald-400 border border-emerald-900 text-[10px] py-2 rounded-lg font-bold hover:bg-emerald-900/20 transition flex items-center justify-center gap-2">📄 Download Excel Template</button>
-                        
                         <button onclick="window.importBulk()" class="text-amber-500 border border-amber-900 text-[10px] py-2 rounded-lg font-bold hover:bg-amber-900/20 transition">Import Text</button>
                         <button onclick="document.getElementById('excelInput').click()" class="text-green-400 border border-green-900 text-[10px] py-2 rounded-lg font-bold hover:bg-green-900/20 transition">📂 Upload Excel</button>
                         <button onclick="window.exportToExcel()" class="text-blue-400 border border-blue-900 text-[10px] py-2 rounded-lg font-bold hover:bg-blue-900/20 transition">Export CSV</button>
@@ -211,14 +210,7 @@
         </div>
     </div>
 
-    <div id="payModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center z-[100] no-print">
-        <div class="bg-[#111] border border-green-700 p-8 rounded-3xl w-80 text-center shadow-2xl">
-            <h3 class="text-green-500 font-black mb-6 uppercase tracking-widest">💰 บันทึกรับเงินเพิ่ม</h3>
-            <input type="number" id="payAmountInput" placeholder="จำนวนเงิน..." class="w-full bg-black border border-gray-700 p-4 text-center text-3xl text-white rounded-2xl mb-6 font-black outline-none focus:border-green-500">
-            <button onclick="window.confirmLedgerPayment()" class="w-full bg-green-800 text-white py-4 rounded-xl font-black text-sm uppercase shadow-lg hover:bg-green-700 transition">Confirm Payment</button>
-            <button onclick="document.getElementById('payModal').classList.add('hidden')" class="mt-6 text-gray-600 text-[10px] uppercase font-bold hover:text-white">Cancel</button>
-        </div>
-    </div>
+    <!-- ลบ HTML Modal จ่ายเงินอันเก่าทิ้งไป -->
 
     <div id="ticketModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center z-[110] p-4">
         <div id="digitalTicket" class="bg-white w-full max-w-xs text-center rounded-2xl overflow-hidden shadow-2xl">
@@ -243,13 +235,13 @@
         // =========================================================
         // ⚠️ CONFIGURATION: นำ Config จาก Firebase Console มาวางใน Object นี้ ⚠️
         const MANUAL_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCoVVEFc1vTU5b5Fx2Jrd1DamYWIIyXPyA",
-  authDomain: "studentmanage-c1bf4.firebaseapp.com",
-  projectId: "studentmanage-c1bf4",
-  storageBucket: "studentmanage-c1bf4.firebasestorage.app",
-  messagingSenderId: "753672108518",
-  appId: "1:753672108518:web:16560d5582227ba33cfe27"
-}; // { apiKey: "...", authDomain: "...", ... }
+          apiKey: "AIzaSyCoVVEFc1vTU5b5Fx2Jrd1DamYWIIyXPyA",
+          authDomain: "studentmanage-c1bf4.firebaseapp.com",
+          projectId: "studentmanage-c1bf4",
+          storageBucket: "studentmanage-c1bf4.firebasestorage.app",
+          messagingSenderId: "753672108518",
+          appId: "1:753672108518:web:16560d5582227ba33cfe27"
+        };
         // =========================================================
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_FIREBASE_CONFIG;
@@ -270,6 +262,25 @@
             const txt = document.getElementById('cloudStatusText');
             if(status === 'ok') { dot.className = "status-dot st-online"; txt.innerText = msg || "REALTIME"; txt.className = "text-[9px] text-green-500 uppercase font-bold tracking-wider"; }
             else if(status === 'error') { dot.className = "status-dot st-error"; txt.innerText = msg || "ERROR"; txt.className = "text-[9px] text-red-500 uppercase font-bold tracking-wider"; }
+        }
+
+        // Helper function for batch chunking (Firebase limit 500)
+        async function commitBatchChunks(batchOps) {
+            const chunkSize = 500;
+            const chunks = [];
+            for (let i = 0; i < batchOps.length; i += chunkSize) {
+                chunks.push(batchOps.slice(i, i + chunkSize));
+            }
+
+            for (const chunk of chunks) {
+                const batch = writeBatch(db);
+                chunk.forEach(op => {
+                    if (op.type === 'set') batch.set(op.ref, op.data);
+                    else if (op.type === 'update') batch.update(op.ref, op.data);
+                    else if (op.type === 'delete') batch.delete(op.ref);
+                });
+                await batch.commit();
+            }
         }
 
         // Initialize Firebase
@@ -359,15 +370,30 @@
         };
 
         window.auth = async (mode) => {
-            const { value: pw } = await Popup.fire({ title: 'Security Access', input: 'password', inputPlaceholder: 'Enter Access Code', showCancelButton: true });
-            if(mode === 'admin' && pw === "2026") { 
+            // STEP 1: Access Code (SIMPLE AUTH)
+            const { value: pw } = await Popup.fire({
+                title: 'Security Access',
+                input: 'password',
+                inputPlaceholder: 'Enter Access Code',
+                showCancelButton: true,
+                background: '#111',
+                color: '#fff'
+            });
+
+            if (!pw) return;
+
+            if (mode === 'admin' && pw === "2026") { 
                 document.getElementById('btnAdmin').classList.remove('hidden'); 
                 document.getElementById('btnFin').classList.remove('hidden');
-                window.switchMode('admin'); Toast.fire({ icon: 'success', title: 'Welcome Admin' });
-            } else if(mode === 'finance' && pw === "2027") {
+                window.switchMode('admin'); 
+                Toast.fire({ icon: 'success', title: 'Welcome Admin' });
+            } else if (mode === 'finance' && pw === "2027") {
                 document.getElementById('btnFin').classList.remove('hidden');
-                window.switchMode('finance'); Toast.fire({ icon: 'success', title: 'Finance Mode Unlocked' });
-            } else if(pw) { Popup.fire({ icon: 'error', title: 'Access Denied' }); }
+                window.switchMode('finance'); 
+                Toast.fire({ icon: 'success', title: 'Finance Mode Unlocked' });
+            } else {
+                Popup.fire({ icon: 'error', title: 'Access Denied', text: 'รหัสผ่านไม่ถูกต้อง' });
+            }
         };
         window.adminLogin = () => window.auth('admin');
 
@@ -569,15 +595,34 @@
             document.getElementById('finFooter').innerHTML = `<tr><td colspan="4" class="p-4 text-right text-gray-400 uppercase text-[10px] tracking-widest">Grand Total Summary:</td><td class="p-4 text-right text-green-400 text-lg">${tIn.toLocaleString()}</td><td class="p-4 text-right text-red-500 text-lg">${tDebt.toLocaleString()}</td><td class="p-4 text-right text-gray-400 uppercase text-[10px]">Total Comm:</td><td class="p-4 text-right text-amber-500 text-lg">${tComm.toLocaleString()}</td></tr>`;
         };
 
-        window.openPayModal = () => document.getElementById('payModal').classList.remove('hidden');
-        window.confirmLedgerPayment = () => {
-            const amt = parseFloat(document.getElementById('payAmountInput').value);
-            if(!amt) return;
-            tempPayments.push({ amt, time: new Date().toISOString() });
-            window.updateAdminLedger();
-            document.getElementById('payModal').classList.add('hidden');
-            document.getElementById('payAmountInput').value = "";
+        // --- เปลี่ยนเป็น SweetAlert2 สำหรับหน้าจอ POS ---
+        window.openPayModal = async () => {
+            const { value: amtStr } = await Popup.fire({
+                title: '💰 บันทึกรับเงินเพิ่ม',
+                input: 'number',
+                inputPlaceholder: 'จำนวนเงิน...',
+                showCancelButton: true,
+                confirmButtonText: 'Confirm Payment',
+                confirmButtonColor: '#15803d',
+                background: '#111',
+                color: '#fff',
+                inputAttributes: {
+                    min: 1,
+                    step: 1,
+                    style: 'text-align: center; font-size: 24px; font-weight: bold; background: #000; color: #fff; border: 1px solid #444;'
+                }
+            });
+
+            if (amtStr) {
+                const amt = parseFloat(amtStr);
+                if (!amt || isNaN(amt)) return;
+                
+                tempPayments.push({ amt, time: new Date().toISOString() });
+                window.updateAdminLedger();
+                Toast.fire({ icon: 'success', title: 'Payment Added' });
+            }
         };
+
         window.updateAdminLedger = () => {
             const paid = getPaidSum(tempPayments);
             document.getElementById('admPaidVal').innerText = paid.toLocaleString();
@@ -629,8 +674,7 @@
             const t = document.getElementById('bulkInput').value.trim();
             if(!t) return;
             const lines = t.split('\n');
-            const batch = writeBatch(db);
-            let count = 0;
+            const batchOps = []; // Store operations, not batch object directly
 
             lines.forEach(line => {
                 const [name, id, type, total, paid, award, table, ref, comm] = line.split('|').map(s=>s?s.trim():"");
@@ -643,15 +687,14 @@
                         award:autoQ, table:table||'', ref:ref||'', comm:parseFloat(comm||0), 
                         created:new Date().toISOString(), checkIn:false 
                     };
-                    batch.set(doc(guestCol, id), data);
-                    count++;
+                    batchOps.push({ type: 'set', ref: doc(guestCol, id), data: data });
                 }
             });
 
-            if(count > 0) {
+            if(batchOps.length > 0) {
                 try {
-                    await batch.commit();
-                    Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${count} รายการเรียบร้อย` });
+                    await commitBatchChunks(batchOps); // Use the new chunker helper
+                    Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${batchOps.length} รายการเรียบร้อย` });
                     document.getElementById('bulkInput').value = "";
                 } catch(e) { Popup.fire({ icon: 'error', title: 'Batch Error', text: e.message }); }
             }
@@ -692,8 +735,7 @@
                         return;
                     }
 
-                    const batch = writeBatch(db);
-                    let count = 0;
+                    const batchOps = []; // Use array for operations
 
                     json.forEach(row => {
                         const getVal = (key) => {
@@ -734,14 +776,13 @@
                                 data.inTime = getVal('Time') || new Date().toLocaleString('th-TH');
                             }
 
-                            batch.set(doc(guestCol, String(id).trim()), data);
-                            count++;
+                            batchOps.push({ type: 'set', ref: doc(guestCol, String(id).trim()), data: data });
                         }
                     });
 
-                    if (count > 0) {
-                        await batch.commit();
-                        Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${count} รายการเรียบร้อย` });
+                    if (batchOps.length > 0) {
+                        await commitBatchChunks(batchOps); // Use chunker
+                        Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${batchOps.length} รายการเรียบร้อย` });
                     } else {
                         Popup.fire({ icon: 'warning', title: 'No Valid Data', text: 'ไม่พบข้อมูลที่มี Name และ ID ครบถ้วน' });
                     }
@@ -813,31 +854,29 @@
         window.hardReset = async () => { 
             const { value: text } = await Popup.fire({ title: 'HARD RESET', text: "Type 'RESET' to delete all data:", input: 'text', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', });
             if (text === 'RESET') {
-                // Warning: This only deletes local loaded guests. For full cleanup, backend function is better.
-                // But for client-side, we iterate deletions.
-                const batch = writeBatch(db);
-                guests.forEach(g => batch.delete(doc(guestCol, g.id)));
-                await batch.commit();
+                const batchOps = [];
+                guests.forEach(g => batchOps.push({ type: 'delete', ref: doc(guestCol, g.id) }));
+                await commitBatchChunks(batchOps); // Use chunker
                 Toast.fire({ icon: 'success', title: 'All Data Deleted' });
             }
         };
         
         window.autoRunTable = async () => {
             let t = 1; 
-            const batch = writeBatch(db);
+            const batchOps = [];
             let updated = 0;
             guests.forEach(g => { 
                 if(!g.table) { 
                     while(guests.filter(x => parseInt(x.table) === t).length >= 8) t++; 
                     if(t <= 40) {
-                        batch.update(doc(guestCol, g.id), { table: t });
+                        batchOps.push({ type: 'update', ref: doc(guestCol, g.id), data: { table: t } });
                         g.table = t; // Optimistic update
                         updated++;
                     }
                 } 
             });
             if(updated > 0) {
-                await batch.commit();
+                await commitBatchChunks(batchOps); // Use chunker
                 Popup.fire({ icon: 'success', title: 'Auto Seating Complete!' });
             } else {
                 Toast.fire({ icon: 'info', title: 'No changes needed' });
