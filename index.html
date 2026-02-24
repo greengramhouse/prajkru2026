@@ -484,6 +484,35 @@
             }
         };
 
+        window.showTableDetails = (tableNum) => {
+            const seated = guests.filter(g => parseInt(g.table) === tableNum);
+            if(seated.length === 0) {
+                return Popup.fire({ title: `โต๊ะ ${tableNum} ว่าง`, text: 'ยังไม่มีผู้จองในโต๊ะนี้', icon: 'info' });
+            }
+            
+            let htmlList = '<div class="text-left mt-4 max-h-64 overflow-y-auto custom-scrollbar border border-gray-800 rounded-xl p-2 bg-[#0a0a0a]">';
+            seated.forEach((g, index) => {
+                htmlList += `
+                <div class="flex items-center gap-3 p-3 border-b border-gray-800/50 last:border-0 hover:bg-white/5 transition rounded-lg">
+                    <div class="bg-gradient-to-br from-amber-400 to-amber-600 text-black font-black w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0">${index + 1}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-white truncate">${g.name}</p>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">${g.type} ${g.award ? ' | คิว: '+g.award : ''}</p>
+                    </div>
+                </div>`;
+            });
+            htmlList += '</div>';
+
+            Swal.fire({
+                title: `<span class="text-gold-lux uppercase tracking-widest text-lg">📍 สมาชิกโต๊ะ ${tableNum}</span><br><span class="text-xs text-gray-500 font-normal">จำนวน ${seated.length}/8 ท่าน</span>`,
+                html: htmlList,
+                background: '#111',
+                confirmButtonColor: '#B38728',
+                confirmButtonText: 'ปิด (Close)',
+                customClass: { popup: 'border border-gray-800' }
+            });
+        };
+
         // --- ADMIN FUNCTIONS ---
         window.saveMasterData = () => {
             window.autoQueuePrefix();
@@ -494,8 +523,13 @@
             if(!id) return Popup.fire({ icon: 'warning', title: 'Missing ID' });
 
             // --- CAPACITY GUARD CHECK ---
-            if(targetTable) {
-                // นับจำนวนคนที่นั่งโต๊ะนี้ (ไม่นับตัวเอง กรณีแก้ไข)
+            let isChangingTable = true;
+            if(idx !== -1 && guests[idx].table == targetTable) {
+                isChangingTable = false; // แค่แก้ไขข้อมูล ไม่ได้ย้ายโต๊ะใหม่
+            }
+
+            if(targetTable && isChangingTable) {
+                // นับจำนวนคนที่นั่งโต๊ะนี้ (ในกรณีที่ย้ายโต๊ะมา หรือ เพิ่มคนใหม่)
                 const currentCount = guests.filter(g => g.table == targetTable && g.id !== id).length;
                 if(currentCount >= 8) {
                     Popup.fire({
@@ -558,7 +592,7 @@
                 const seated = guests.filter(x => parseInt(x.table) === i);
                 let cls = seated.length >= 8 ? 't-full' : (seated.length > 0 ? 't-occupied' : 't-empty');
                 let tooltip = seated.length > 0 ? seated.map(g => `${g.name} (${g.type})`).join('<br>') : "Empty";
-                mapArea.innerHTML += `<div id="tbl-${i}" class="table-lux ${cls}"><span class="text-sm font-black text-white">${i}</span><span class="text-[9px] text-gray-400 mt-1">${seated.length}/8</span><div class="table-tooltip">${tooltip}</div></div>`;
+                mapArea.innerHTML += `<div id="tbl-${i}" onclick="window.showTableDetails(${i})" class="table-lux ${cls}"><span class="text-sm font-black text-white">${i}</span><span class="text-[9px] text-gray-400 mt-1">${seated.length}/8</span><div class="table-tooltip">${tooltip}</div></div>`;
             }
 
             // List
