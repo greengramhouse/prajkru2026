@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praj Kru Kon Dee 2026 - Firebase Realtime</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS for Excel Import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold-grad: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C); }
+        body { font-family: 'Sarabun', sans-serif; background-color: #050505; color: #e5e5e5; overflow-x: hidden; }
+        .text-gold-lux { background: var(--gold-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+        .glass-panel { background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(10px); border: 1px solid #333; border-image: var(--gold-grad) 1; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .btn-gold { background: var(--gold-grad); color: #111; font-weight: 800; border: none; transition: 0.3s; }
+        .btn-gold:hover { filter: brightness(1.2); box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); transform: translateY(-1px); }
+        .input-lux { background: rgba(0,0,0,0.6); border: 1px solid #444; color: white; padding: 10px; outline: none; width: 100%; transition: 0.3s; font-size: 13px; }
+        .input-lux:focus { border-color: #FFD700; background: rgba(255,255,255,0.05); }
+        .table-lux {
+            width: 60px; height: 60px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d); border: 2px solid #333;
+            box-shadow: 5px 5px 10px #050505, -5px -5px 10px #262626; cursor: pointer; position: relative; transition: all 0.4s ease;
+        }
+        .table-lux:hover { transform: scale(1.15); border-color: #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); z-index: 10; }
+        .t-highlight { animation: pulse-gold 1s infinite; border-color: #fff !important; transform: scale(1.2); z-index: 20; }
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        .table-tooltip {
+            visibility: hidden; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); border: 1px solid #FFD700; color: #fff; text-align: left;
+            padding: 8px; border-radius: 8px; font-size: 10px; white-space: nowrap; z-index: 50; width: max-content; box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; transition: 0.3s;
+        }
+        .table-lux:hover .table-tooltip { visibility: visible; opacity: 1; bottom: 130%; }
+        #loadingOverlay { backdrop-filter: blur(10px); }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255, 215, 0, 0.3); border-top: 5px solid #FFD700; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; }
+        .st-online { background-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .st-syncing { background-color: #eab308; box-shadow: 0 0 10px #eab308; animation: pulse 1s infinite; }
+        .st-error { background-color: #ef4444; }
+        @media print { .no-print { display: none !important; } #printArea { display: block !important; width: 100%; height: auto; } body { background: white !important; color: black !important; } table { width: 100%; border-collapse: collapse; font-size: 10px; } th, td { border: 1px solid #000; padding: 4px; color: black !important; } th { background-color: #eee !important; font-weight: bold; text-align: center; } tfoot { font-weight: bold; background-color: #ddd !important; } }
+        #printArea { display: none; }
+        .swal2-popup { border: 1px solid #444; }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <nav class="no-print fixed w-full z-50 top-0 bg-black/90 border-b border-[#333] px-6 py-3 flex justify-between items-center shadow-lg backdrop-blur-md">
+        <div class="flex items-center gap-3 select-none cursor-pointer hover:opacity-80 transition" onclick="window.adminLogin()" title="Click to Admin Login">
+            <h1 class="text-2xl font-black italic text-gold-lux uppercase tracking-wider">PRAJKRU 2026</h1>
+            <span class="text-[10px] text-gray-500 uppercase tracking-[0.2em] border-l border-gray-600 pl-3">Register</span>
+        </div>
+        <div class="flex items-center gap-2 bg-black/50 border border-gray-800 px-3 py-1 rounded-full">
+            <span id="cloudStatusDot" class="status-dot st-syncing"></span>
+            <span id="cloudStatusText" class="text-[9px] text-gray-400 uppercase font-bold tracking-wider">CONNECTING...</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="window.switchMode('guest')" class="px-5 py-1.5 rounded-full text-xs border border-[#B38728] text-[#FCF6BA] font-bold hover:bg-[#B38728] hover:text-black transition">หน้าเช็คอิน</button>
+            <button id="btnAdmin" onclick="window.auth('admin')" class="px-5 py-1.5 rounded-full text-xs bg-gray-800 text-white border border-gray-600 hover:bg-white hover:text-black transition hidden">จัดการข้อมูล</button>
+            <button id="btnFin" onclick="window.auth('finance')" class="px-5 py-1.5 rounded-full text-xs bg-blue-900 text-white border border-blue-600 hover:bg-blue-500 transition hidden">รายงานการเงิน</button>
+        </div>
+    </nav>
+
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center">
+        <div class="spinner mb-6"></div>
+        <p id="loadingText" class="text-gold-lux uppercase tracking-[0.2em] text-lg font-bold animate-pulse">Connecting to Database...</p>
+    </div>
+
+    <!-- GUEST MODE -->
+    <div id="guestMode" class="pt-24 px-4 no-print flex flex-col items-center min-h-screen hidden">
+        <div class="w-full max-w-lg glass-panel rounded-3xl p-10 text-center border-t-4 border-amber-500 shadow-[0_0_50px_rgba(255,215,0,0.1)]">
+            <h2 class="text-3xl font-black mb-2 text-white uppercase tracking-wider">ลงทะเบียนเข้าร่วมงาน</h2>
+            <p class="text-gray-500 text-xs mb-8">กรุณากรอกชื่อหรือรหัส เพื่อค้นหาข้อมูล</p>
+            <div class="relative group">
+                <input type="text" id="searchInput" onkeyup="if(event.key==='Enter') window.searchGuest()" placeholder="ชื่อ-นามสกุล / รหัส ID" class="w-full bg-black/50 border-2 border-gray-700 rounded-2xl p-5 text-center text-2xl text-white mb-4 outline-none focus:border-amber-500 transition-all placeholder-gray-700 group-hover:border-gray-500">
+                <button onclick="window.searchGuest()" class="w-full btn-gold py-4 rounded-2xl text-lg uppercase tracking-widest font-black shadow-lg hover:scale-[1.02] transition">🔍 ค้นหาข้อมูล (Search)</button>
+            </div>
+            
+            <div id="checkInResult" class="hidden text-left bg-[#0c0c0c] p-6 rounded-2xl border border-gray-800 shadow-2xl relative mt-8 animate-[fadeIn_0.5s_ease-out]">
+                <div id="resBadge" class="absolute top-4 right-4 px-3 py-1 text-[10px] font-black border rounded-full uppercase tracking-wider">TYPE</div>
+                <h3 id="resName" class="text-2xl font-bold text-white mb-1 truncate">-</h3>
+                <p id="resIdDisplay" class="text-xs text-gray-500 mb-6 font-mono">ID: -</p>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-black/60 p-4 rounded-xl border border-gray-800 text-center"><p class="text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">TABLE</p><p id="resTable" class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-300 to-amber-600">-</p></div>
+                    <div class="bg-black/60 p-4 rounded-xl border border-gray-800 text-center"><p class="text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">QUEUE</p><p id="resQueue" class="text-4xl font-black text-white">-</p></div>
+                </div>
+                
+                <div id="finWarning" class="hidden bg-red-950/30 border border-red-900/50 p-4 rounded-xl mb-6 text-center shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                    <p class="text-red-500 font-bold text-sm uppercase tracking-wider animate-pulse">⚠️ ยอดค้างชำระ (Unpaid)</p>
+                    <p class="text-red-400 text-xs mt-1">กรุณาติดต่อเจ้าหน้าที่ (Contact Staff)</p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="btnCheckInAction" class="flex-1 bg-green-700 text-white py-4 rounded-xl font-black text-sm uppercase transition hover:bg-green-600 shadow-lg">Confirm Check-In</button>
+                    <button onclick="window.viewTicketImg()" class="bg-gray-800 text-gray-400 px-5 rounded-xl hover:bg-white hover:text-black transition">📷</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN MODE -->
+    <div id="adminMode" class="hidden pt-24 px-6 max-w-[1900px] mx-auto no-print">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+                    <div class="flex justify-between items-center mb-6 pb-2 border-b border-gray-700">
+                        <h3 class="text-gold-lux uppercase text-sm tracking-widest font-bold">🛠️ Manage Guest</h3>
+                        <button onclick="window.resetForm()" class="text-[10px] text-gray-500 hover:text-white uppercase">Reset</button>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="hidden" id="editIdx" value="-1">
+                        <div><label class="text-[10px] text-gray-500 uppercase ml-1">ชื่อ-นามสกุล</label><input type="text" id="admName" class="input-lux rounded-lg"></div>
+                        <div class="flex gap-2">
+                            <div class="w-1/3"><label class="text-[10px] text-gray-500 uppercase ml-1">ID</label><input type="text" id="admId" class="input-lux rounded-lg"></div>
+                            <div class="w-2/3"><label class="text-[10px] text-gray-500 uppercase ml-1">ประเภท</label><select id="admType" onchange="window.autoQueuePrefix()" class="input-lux rounded-lg bg-[#111] text-amber-400 font-bold cursor-pointer"><option value="VIP">⭐ VIP</option><option value="ทั่วไป">ทั่วไป (Gen)</option><option value="GUEST">💎 GUEST</option><option value="ผู้ติดตาม">ผู้ติดตาม</option></select></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="w-1/2"><label class="text-[10px] text-gray-500 uppercase ml-1">คิว (Queue)</label><input type="text" id="admAward" onblur="window.autoQueuePrefix()" placeholder="Auto V/G" class="input-lux rounded-lg font-bold text-center"></div>
+                            <div class="w-1/2"><label class="text-[10px] text-gray-500 uppercase ml-1">โต๊ะ (Table)</label><input type="number" id="admTable" class="input-lux rounded-lg text-center"></div>
+                        </div>
+                        <div class="p-3 bg-blue-900/10 border border-blue-900/30 rounded-xl">
+                            <p class="text-[9px] text-blue-400 uppercase font-bold mb-2">🔹 ข้อมูลสำหรับคิดค่าคอมมิชชั่น</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="admRef" placeholder="ชื่อผู้แนะนำ" class="input-lux rounded-lg w-1/2 text-xs">
+                                <input type="number" id="admComm" placeholder="ค่าแนะนำ (บาท)" class="input-lux rounded-lg w-1/2 text-xs text-right">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-black/40 rounded-xl border border-gray-800">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[10px] text-gray-400 uppercase font-bold">ยอดเงินเต็ม (Total Price):</span>
+                                <input type="number" id="admTotal" oninput="window.updateAdminLedger()" class="input-lux w-24 text-right rounded-lg text-lg font-bold bg-black">
+                            </div>
+                            <div id="admHistoryList" class="max-h-24 overflow-y-auto mb-3 space-y-1 pr-1 custom-scrollbar"></div>
+                            <div class="flex justify-between border-t border-gray-700 pt-3">
+                                <span class="text-[10px] text-gray-500 uppercase">Paid: <span id="admPaidVal" class="text-green-500 font-bold text-sm">0</span></span>
+                                <span class="text-[10px] text-gray-500 uppercase">Bal: <span id="admBalVal" class="text-red-500 font-bold text-sm">0</span></span>
+                            </div>
+                            <button onclick="window.openPayModal()" class="w-full mt-3 py-2 text-green-500 text-[10px] border border-green-800 rounded-lg uppercase font-bold hover:bg-green-900/20 transition">+ Add Payment (รับเงินเพิ่ม)</button>
+                        </div>
+                        <button onclick="window.saveMasterData()" class="w-full btn-gold py-3 rounded-xl uppercase text-sm font-black shadow-lg tracking-wider mt-2">SAVE TO FIREBASE</button>
+                    </div>
+                </div>
+                <div class="glass-panel p-5 rounded-xl border border-gray-800">
+                    <h3 class="text-gray-500 text-[10px] font-bold mb-3 uppercase tracking-widest">Bulk Import / Export</h3>
+                    <textarea id="bulkInput" placeholder="Name | ID | Type | Total | Paid | Queue | Table | Referrer | Comm" class="w-full bg-black/60 border border-gray-700 rounded-lg p-3 text-[10px] h-20 text-gray-300 outline-none focus:border-amber-500"></textarea>
+                    
+                    <!-- Hidden File Input for Excel -->
+                    <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="window.processExcelFile(this)">
+                    
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <!-- ปุ่มดาวน์โหลด Template เพิ่มเข้ามาใหม่ -->
+                        <button onclick="window.downloadTemplate()" class="col-span-2 text-emerald-400 border border-emerald-900 text-[10px] py-2 rounded-lg font-bold hover:bg-emerald-900/20 transition flex items-center justify-center gap-2">📄 Download Excel Template</button>
+                        
+                        <button onclick="window.importBulk()" class="text-amber-500 border border-amber-900 text-[10px] py-2 rounded-lg font-bold hover:bg-amber-900/20 transition">Import Text</button>
+                        <button onclick="document.getElementById('excelInput').click()" class="text-green-400 border border-green-900 text-[10px] py-2 rounded-lg font-bold hover:bg-green-900/20 transition">📂 Upload Excel</button>
+                        <button onclick="window.exportToExcel()" class="text-blue-400 border border-blue-900 text-[10px] py-2 rounded-lg font-bold hover:bg-blue-900/20 transition">Export CSV</button>
+                        <button onclick="window.hardReset()" class="text-red-500 border border-red-900 text-[10px] py-2 rounded-lg font-bold hover:bg-red-900/20 transition">Reset DB</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-9 space-y-6">
+                <div class="glass-panel p-8 rounded-2xl relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-gold-lux uppercase text-sm tracking-widest">📍 Luxury Seating Plan</h3>
+                        <div class="flex items-center gap-4">
+                            <input type="text" id="mapSearch" onkeyup="window.highlightTable()" placeholder="🔍 ค้นหาในผังโต๊ะ..." class="bg-black/50 border border-gray-700 rounded-full px-4 py-1 text-xs text-white w-48 outline-none focus:border-amber-500">
+                            <button onclick="window.autoRunTable()" class="bg-emerald-900/50 text-emerald-400 border border-emerald-700 px-4 py-1.5 rounded-lg text-[10px] font-bold hover:bg-emerald-800 transition">AUTO RUN (8/Table)</button>
+                        </div>
+                    </div>
+                    <div id="visualMap" class="flex flex-wrap gap-5 justify-center bg-black/40 p-8 rounded-2xl border border-gray-800/50"></div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl overflow-hidden min-h-[400px] flex flex-col">
+                    <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                        <div class="flex gap-2 items-center">
+                            <select id="fGrp" onchange="window.renderAdmin()" class="bg-black border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5"><option value="All">ทุกกลุ่ม (All)</option><option value="VIP">VIP</option><option value="ทั่วไป">ทั่วไป</option><option value="GUEST">Guest</option></select>
+                            <select id="fSts" onchange="window.renderAdmin()" class="bg-black border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5"><option value="All">ทุกสถานะ (All)</option><option value="CheckedIn">✅ มาแล้ว</option><option value="Unpaid">⚠️ ค้างจ่าย</option></select>
+                            <button onclick="window.printCurrentView()" class="bg-white text-black px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200">🖨️ พิมพ์หน้านี้</button>
+                        </div>
+                        <input type="text" id="admSearch" onkeyup="window.renderAdmin()" placeholder="🔍 ค้นหารายชื่อ..." class="bg-black border border-gray-700 text-white text-xs rounded-lg px-4 py-1.5 w-64 outline-none focus:border-amber-500">
+                    </div>
+                    <div class="overflow-x-auto flex-grow custom-scrollbar">
+                        <table class="w-full text-left text-[11px] text-gray-300">
+                            <thead><tr class="text-gold-lux border-b border-gray-800 uppercase tracking-wider bg-black/20"><th class="p-3">Queue</th><th>Name / ID</th><th>Type</th><th class="text-center">Table</th><th class="text-right">Total</th><th class="text-right">Balance</th><th class="text-right">Action</th></tr></thead>
+                            <tbody id="guestTableBody" class="divide-y divide-gray-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="financeMode" class="hidden pt-24 px-6 max-w-[1600px] mx-auto no-print">
+        <div class="glass-panel p-8 rounded-3xl space-y-8 border-l-4 border-blue-600">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-gray-800 pb-8">
+                <div><h2 class="text-3xl font-black text-gold-lux uppercase tracking-tighter">💰 Financial Report Hub</h2><p class="text-xs text-gray-500 uppercase tracking-widest mt-1">รายงานธุรกรรมการเงินและค่าคอมมิชชั่นแบบเจาะลึก</p></div>
+                <div class="flex gap-4">
+                    <div class="bg-black/60 p-4 rounded-2xl border border-gray-800 text-center min-w-[160px]"><p class="text-[9px] text-gray-500 uppercase font-bold mb-1">ยอดเงินสดรับจริง</p><p id="sumIncome" class="text-3xl font-black text-green-500 font-mono">0</p></div>
+                    <div class="bg-black/60 p-4 rounded-2xl border border-gray-800 text-center min-w-[160px]"><p class="text-[9px] text-gray-500 uppercase font-bold mb-1">ยอดคงค้าง</p><p id="sumDebt" class="text-3xl font-black text-red-500 font-mono">0</p></div>
+                    <div class="bg-black/60 p-4 rounded-2xl border border-gray-800 text-center min-w-[160px]"><p class="text-[9px] text-gray-500 uppercase font-bold mb-1">รวมค่าแนะนำ</p><p id="sumComm" class="text-3xl font-black text-amber-500 font-mono">0</p></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-black/40 p-4 rounded-2xl border border-gray-800">
+                <div><p class="text-[10px] text-gray-500 uppercase font-black mb-1">📅 กรองตามวันที่:</p><input type="date" id="finDate" onchange="window.renderFinance()" class="w-full bg-black border border-gray-700 text-white rounded-lg p-2 text-xs"></div>
+                <div class="md:col-span-2"><p class="text-[10px] text-gray-500 uppercase font-black mb-1">🔍 ค้นหา (Name / ID / Referrer):</p><input type="text" id="finSearch" onkeyup="window.renderFinance()" placeholder="พิมพ์ชื่อผู้เข้างาน หรือ ชื่อผู้แนะนำ..." class="w-full bg-black border border-gray-700 text-white rounded-lg p-2 text-xs outline-none focus:border-blue-500"></div>
+                <div class="flex items-end"><button onclick="window.printFinReport()" class="w-full bg-white text-black py-2 rounded-lg font-black text-xs uppercase hover:bg-gray-200 transition">🖨️ Print Statement</button></div>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-left text-xs text-gray-300"><thead class="bg-gray-800 text-gray-400 font-black uppercase"><tr><th class="p-3">ID</th><th>ชื่อ-นามสกุล</th><th>ประเภท</th><th class="text-right">ยอดเต็ม</th><th class="text-right">ชำระแล้ว</th><th class="text-right">คงเหลือ</th><th>ผู้แนะนำ</th><th class="text-right">ค่าแนะนำ</th></tr></thead><tbody id="finTableBody" class="divide-y divide-gray-800"></tbody><tfoot id="finFooter" class="bg-black/90 font-black border-t-2 border-amber-600"></tfoot></table></div>
+        </div>
+    </div>
+
+    <div id="payModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center z-[100] no-print">
+        <div class="bg-[#111] border border-green-700 p-8 rounded-3xl w-80 text-center shadow-2xl">
+            <h3 class="text-green-500 font-black mb-6 uppercase tracking-widest">💰 บันทึกรับเงินเพิ่ม</h3>
+            <input type="number" id="payAmountInput" placeholder="จำนวนเงิน..." class="w-full bg-black border border-gray-700 p-4 text-center text-3xl text-white rounded-2xl mb-6 font-black outline-none focus:border-green-500">
+            <button onclick="window.confirmLedgerPayment()" class="w-full bg-green-800 text-white py-4 rounded-xl font-black text-sm uppercase shadow-lg hover:bg-green-700 transition">Confirm Payment</button>
+            <button onclick="document.getElementById('payModal').classList.add('hidden')" class="mt-6 text-gray-600 text-[10px] uppercase font-bold hover:text-white">Cancel</button>
+        </div>
+    </div>
+
+    <div id="ticketModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center z-[110] p-4">
+        <div id="digitalTicket" class="bg-white w-full max-w-xs text-center rounded-2xl overflow-hidden shadow-2xl">
+            <div class="h-4 bg-gradient-to-r from-amber-400 to-amber-600"></div>
+            <div class="p-8 text-black">
+                <h2 class="text-xl font-black uppercase mb-6 tracking-widest">PRAJKRU 2026</h2>
+                <div class="flex justify-center gap-4 mb-6"><div class="bg-black text-amber-400 p-3 rounded-xl w-24"><p class="text-[8px] uppercase">Table</p><p id="tTable" class="text-3xl font-black">-</p></div><div class="border-4 border-amber-500 text-black p-3 rounded-xl w-24"><p class="text-[8px] uppercase">Queue</p><p id="tQueue" class="text-3xl font-black">-</p></div></div>
+                <p id="tName" class="text-lg font-bold mb-1">-</p><p id="tId" class="text-xs text-gray-500 mb-6 font-mono">-</p>
+                <div class="border-t border-dashed border-gray-300 pt-4"><p class="text-green-600 font-bold text-sm uppercase">Checked In Successfully</p><p id="tTime" class="text-[10px] text-gray-400"></p></div>
+            </div>
+            <div class="bg-gray-100 p-4 flex gap-2 no-print"><button onclick="window.downloadTicket()" class="flex-1 bg-black text-white py-2 rounded text-xs font-bold">Save Image</button><button onclick="document.getElementById('ticketModal').classList.add('hidden')" class="px-3 text-gray-400 text-xs">Close</button></div>
+        </div>
+    </div>
+
+    <div id="printArea" class="print-only"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // =========================================================
+        // ⚠️ CONFIGURATION: นำ Config จาก Firebase Console มาวางใน Object นี้ ⚠️
+        const MANUAL_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCoVVEFc1vTU5b5Fx2Jrd1DamYWIIyXPyA",
+  authDomain: "studentmanage-c1bf4.firebaseapp.com",
+  projectId: "studentmanage-c1bf4",
+  storageBucket: "studentmanage-c1bf4.firebasestorage.app",
+  messagingSenderId: "753672108518",
+  appId: "1:753672108518:web:16560d5582227ba33cfe27"
+}; // { apiKey: "...", authDomain: "...", ... }
+        // =========================================================
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_FIREBASE_CONFIG;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'prajkru-2026';
+
+        let app, auth, db, guestCol;
+        let guests = [];
+        let tempPayments = [];
+        let currentIdx = -1;
+        let currentGuest = null;
+
+        // UI Helpers
+        const Popup = Swal.mixin({ background: '#111', color: '#e5e5e5', confirmButtonColor: '#B38728', cancelButtonColor: '#333' });
+        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true, background: '#222', color: '#fff' });
+
+        function setStatus(status, msg) {
+            const dot = document.getElementById('cloudStatusDot');
+            const txt = document.getElementById('cloudStatusText');
+            if(status === 'ok') { dot.className = "status-dot st-online"; txt.innerText = msg || "REALTIME"; txt.className = "text-[9px] text-green-500 uppercase font-bold tracking-wider"; }
+            else if(status === 'error') { dot.className = "status-dot st-error"; txt.innerText = msg || "ERROR"; txt.className = "text-[9px] text-red-500 uppercase font-bold tracking-wider"; }
+        }
+
+        // Initialize Firebase
+        if (firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            guestCol = collection(db, 'artifacts', appId, 'public', 'data', 'guests');
+
+            // NEW AUTH LOGIC
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("Signed in with custom token");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously");
+                    }
+                    
+                    // Real-time Listener (moved inside success)
+                    onSnapshot(guestCol, (snapshot) => {
+                        guests = [];
+                        snapshot.forEach(doc => guests.push(doc.data()));
+                        renderAdmin();
+                        renderFinance();
+                        // Auto-update current view
+                        if (currentGuest) {
+                            const fresh = guests.find(g => g.id === currentGuest.id);
+                            if (fresh) {
+                                currentGuest = fresh;
+                                // Only update UI if we are in guest mode and not in the middle of confirm
+                                const resultPanel = document.getElementById('checkInResult');
+                                if(!resultPanel.classList.contains('hidden') && document.getElementById('guestMode').classList.contains('hidden') === false) {
+                                    document.getElementById('resQueue').innerText = fresh.award || "-";
+                                    document.getElementById('resTable').innerText = fresh.table || "-";
+                                    const btn = document.getElementById('btnCheckInAction');
+                                    if(fresh.checkIn) {
+                                        btn.innerText = "ALREADY CHECKED-IN";
+                                        btn.className = "flex-1 bg-gray-800 text-gray-500 py-4 rounded-xl font-black text-sm uppercase cursor-not-allowed";
+                                        btn.disabled = true;
+                                        btn.style.opacity = 0.5;
+                                    }
+                                }
+                            }
+                        }
+                        setStatus('ok', 'REALTIME');
+                        
+                        const loader = document.getElementById('loadingOverlay');
+                        if (!loader.classList.contains('hidden')) {
+                            loader.classList.add('hidden');
+                            document.getElementById('guestMode').classList.remove('hidden');
+                        }
+                    }, (error) => {
+                        console.error("Snapshot Error:", error);
+                        setStatus('error', 'PERMISSION DENIED');
+                        Popup.fire({ icon: 'error', title: 'Connection Error', text: 'กรุณาตรวจสอบ Internet หรือ Firebase Rules' });
+                    });
+
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    if (error.code === 'auth/admin-restricted-operation' || error.code === 'auth/operation-not-allowed') {
+                        setStatus('error', 'AUTH CONFIG ERROR');
+                        Popup.fire({ 
+                            icon: 'error', 
+                            title: 'Authentication Error', 
+                            html: `<p class="text-sm"><b>Anonymous Sign-in is disabled.</b><br>Please enable it in Firebase Console:<br><i>Authentication > Sign-in method > Anonymous</i></p>` 
+                        });
+                    } else {
+                        setStatus('error', 'AUTH FAILED');
+                        Popup.fire({ icon: 'error', title: 'Auth Failed', text: error.message });
+                    }
+                }
+            };
+
+            initAuth();
+
+        } else {
+            setStatus('error', 'NO CONFIG');
+            Popup.fire({ icon: 'warning', title: 'Setup Required', text: 'กรุณาใส่ Firebase Config ใน Code ก่อนใช้งาน' });
+        }
+
+        // --- GLOBAL EXPORTS (For HTML onclick) ---
+        window.switchMode = (m) => {
+            ['guestMode','adminMode','financeMode'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById(m+'Mode').classList.remove('hidden');
+        };
+
+        window.auth = async (mode) => {
+            const { value: pw } = await Popup.fire({ title: 'Security Access', input: 'password', inputPlaceholder: 'Enter Access Code', showCancelButton: true });
+            if(mode === 'admin' && pw === "2026") { 
+                document.getElementById('btnAdmin').classList.remove('hidden'); 
+                document.getElementById('btnFin').classList.remove('hidden');
+                window.switchMode('admin'); Toast.fire({ icon: 'success', title: 'Welcome Admin' });
+            } else if(mode === 'finance' && pw === "2027") {
+                document.getElementById('btnFin').classList.remove('hidden');
+                window.switchMode('finance'); Toast.fire({ icon: 'success', title: 'Finance Mode Unlocked' });
+            } else if(pw) { Popup.fire({ icon: 'error', title: 'Access Denied' }); }
+        };
+        window.adminLogin = () => window.auth('admin');
+
+        window.autoQueuePrefix = () => {
+            const type = document.getElementById('admType').value;
+            let qInput = document.getElementById('admAward');
+            let q = qInput.value.trim().toUpperCase().replace(/^(V-|G-|GT-|F-)/, '');
+            if (type === 'VIP') { if (q && !q.startsWith('V-')) qInput.value = 'V-' + q; } 
+            else if (type === 'ทั่วไป') { if (q && !q.startsWith('G-')) qInput.value = 'G-' + q; }
+        };
+
+        const cleanName = (n) => n.replace(/^(นาย|นาง|นางสาว|น\.ส\.|ดร\.|ผอ\.|ครู|ว่าที่|พระ|พล\.ต\.|พล\.อ\.)/g, '').trim();
+        const getPaidSum = (pArr) => (pArr || []).reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+
+        window.searchGuest = () => {
+            const raw = document.getElementById('searchInput').value.trim();
+            const q = cleanName(raw).toLowerCase();
+            const g = guests.find(x => cleanName(x.name).toLowerCase() === q || x.id === raw);
+            
+            if(!g) { currentGuest = null; return Popup.fire({ icon: 'error', title: 'ไม่พบข้อมูล' }); }
+            currentGuest = g;
+            
+            document.getElementById('checkInResult').classList.remove('hidden');
+            document.getElementById('resName').innerText = g.name;
+            document.getElementById('resIdDisplay').innerText = "ID: " + g.id;
+            document.getElementById('resTable').innerText = g.table || "-";
+            document.getElementById('resQueue').innerText = g.award || "-";
+            document.getElementById('resBadge').innerText = g.type;
+
+            const paid = getPaidSum(g.payments);
+            const debt = (parseFloat(g.total || 0) - paid);
+            const btn = document.getElementById('btnCheckInAction');
+
+            if(debt > 0) {
+                document.getElementById('finWarning').classList.remove('hidden');
+                btn.disabled = true; btn.style.opacity = 0.3; btn.innerText = "LOCKED (UNPAID)";
+                btn.className = "flex-1 bg-gray-800 text-gray-500 py-4 rounded-xl font-black text-sm uppercase cursor-not-allowed";
+                return;
+            } else { document.getElementById('finWarning').classList.add('hidden'); }
+
+            if(g.checkIn) {
+                btn.innerText = "ALREADY CHECKED-IN";
+                btn.className = "flex-1 bg-gray-800 text-gray-500 py-4 rounded-xl font-black text-sm uppercase cursor-not-allowed";
+                btn.disabled = true; btn.style.opacity = 0.5;
+            } else {
+                btn.innerText = "CONFIRM CHECK-IN";
+                btn.className = "flex-1 bg-green-700 text-white py-4 rounded-xl font-black text-sm uppercase transition hover:bg-green-600 shadow-lg cursor-pointer";
+                btn.disabled = false; btn.style.opacity = 1;
+                btn.onclick = () => { 
+                    Popup.fire({ title: 'ยืนยันการลงทะเบียน?', text: `คุณ ${g.name}`, icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Check-in!', confirmButtonColor: '#15803d' }).then((result) => {
+                        if (result.isConfirmed) {
+                            // FIREBASE WRITE
+                            const newData = { ...g, checkIn: true, inTime: new Date().toLocaleString('th-TH') };
+                            setDoc(doc(guestCol, g.id), newData)
+                                .then(() => {
+                                    window.showTicket(newData);
+                                    Toast.fire({icon: 'success', title: 'Check-in สำเร็จ!'});
+                                })
+                                .catch(e => Popup.fire({ icon: 'error', title: 'Error', text: e.message }));
+                        }
+                    });
+                };
+            }
+        };
+
+        window.viewTicketImg = () => {
+            if(!currentGuest) return Popup.fire({ icon: 'error', title: 'No Data' });
+            if(currentGuest.checkIn) window.showTicket(currentGuest);
+            else Popup.fire({ icon: 'info', title: 'Ticket Locked', text: 'ต้องกด Check-In ก่อน' });
+        };
+
+        window.showTicket = (g) => {
+            document.getElementById('tName').innerText = g.name; document.getElementById('tId').innerText = "ID: " + g.id;
+            document.getElementById('tTable').innerText = g.table || '-'; document.getElementById('tQueue').innerText = g.award || '-';
+            document.getElementById('tTime').innerText = g.inTime; document.getElementById('ticketModal').classList.remove('hidden');
+        };
+        window.downloadTicket = () => { html2canvas(document.getElementById('digitalTicket'), {scale: 3}).then(c => { const l = document.createElement('a'); l.download = `Ticket.png`; l.href = c.toDataURL(); l.click(); }); };
+
+        window.highlightTable = () => {
+            const txt = document.getElementById('mapSearch').value.toLowerCase();
+            document.querySelectorAll('.table-lux').forEach(n => {
+                n.classList.remove('t-highlight');
+                if(txt && n.innerText.split('\n')[0].trim() === txt) n.classList.add('t-highlight');
+            });
+            if(txt) {
+                const foundG = guests.filter(g => (g.name.toLowerCase().includes(txt) || g.id.includes(txt)) && g.table);
+                foundG.forEach(g => { const el = document.getElementById(`tbl-${g.table}`); if(el) el.classList.add('t-highlight'); });
+            }
+        };
+
+        // --- ADMIN FUNCTIONS ---
+        window.saveMasterData = () => {
+            window.autoQueuePrefix();
+            const idx = parseInt(document.getElementById('editIdx').value);
+            const id = document.getElementById('admId').value.trim();
+            const targetTable = document.getElementById('admTable').value; // Get table number
+
+            if(!id) return Popup.fire({ icon: 'warning', title: 'Missing ID' });
+
+            // --- CAPACITY GUARD CHECK ---
+            if(targetTable) {
+                // นับจำนวนคนที่นั่งโต๊ะนี้ (ไม่นับตัวเอง กรณีแก้ไข)
+                const currentCount = guests.filter(g => g.table == targetTable && g.id !== id).length;
+                if(currentCount >= 8) {
+                    Popup.fire({
+                        title: `⚠️ โต๊ะ ${targetTable} เต็มแล้ว!`,
+                        html: `ขณะนี้มีสมาชิกรวม <b>${currentCount}</b> คน<br>ต้องการเพิ่มคนเข้าไปอีกหรือไม่?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'ยืนยัน (Add Anyway)',
+                        confirmButtonColor: '#d33',
+                        cancelButtonText: 'ยกเลิก (Cancel)',
+                        cancelButtonColor: '#333',
+                        background: '#222',
+                        color: '#fff'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.processSave(idx, id); // Proceed if confirmed
+                        }
+                    });
+                    return; // Stop execution to wait for confirmation
+                }
+            }
+            
+            // If no warning needed, proceed immediately
+            window.processSave(idx, id);
+        };
+
+        // แยก Logic การบันทึกออกมาเพื่อให้เรียกใช้ได้หลังกด Confirm
+        window.processSave = (idx, id) => {
+            const now = new Date().toISOString(); 
+            // Use existing object if editing, to preserve checkIn status
+            const baseObj = idx !== -1 ? guests[idx] : { created: now, checkIn: false, inTime: null };
+            
+            const data = {
+                ...baseObj,
+                id, name: document.getElementById('admName').value, type: document.getElementById('admType').value,
+                award: document.getElementById('admAward').value, table: document.getElementById('admTable').value,
+                ref: document.getElementById('admRef').value, comm: parseFloat(document.getElementById('admComm').value || 0),
+                total: parseFloat(document.getElementById('admTotal').value || 0), payments: tempPayments
+            };
+
+            setDoc(doc(guestCol, id), data)
+                .then(() => { window.resetForm(); Toast.fire({ icon: 'success', title: 'Saved to Firebase' }); })
+                .catch(e => Popup.fire({ icon: 'error', title: 'Save Failed', text: e.message }));
+        };
+
+        window.renderAdmin = () => {
+            const s = document.getElementById('admSearch').value.toLowerCase();
+            const grp = document.getElementById('fGrp').value;
+            const sts = document.getElementById('fSts').value;
+            const list = guests.filter(x => {
+                const matchSearch = cleanName(x.name).toLowerCase().includes(s) || x.id.includes(s);
+                const matchGrp = grp === 'All' || x.type === grp;
+                const matchSts = sts === 'All' || (sts === 'CheckedIn' ? x.checkIn : (sts === 'Unpaid' ? (x.total - getPaidSum(x.payments)) > 0 : true));
+                return matchSearch && matchGrp && matchSts;
+            });
+
+            // Map
+            const mapArea = document.getElementById('visualMap'); mapArea.innerHTML = "";
+            for(let i=1; i<=40; i++) {
+                const seated = guests.filter(x => parseInt(x.table) === i);
+                let cls = seated.length >= 8 ? 't-full' : (seated.length > 0 ? 't-occupied' : 't-empty');
+                let tooltip = seated.length > 0 ? seated.map(g => `${g.name} (${g.type})`).join('<br>') : "Empty";
+                mapArea.innerHTML += `<div id="tbl-${i}" class="table-lux ${cls}"><span class="text-sm font-black text-white">${i}</span><span class="text-[9px] text-gray-400 mt-1">${seated.length}/8</span><div class="table-tooltip">${tooltip}</div></div>`;
+            }
+
+            // List
+            document.getElementById('guestTableBody').innerHTML = list.map(g => {
+                const paid = getPaidSum(g.payments);
+                const bal = parseFloat(g.total || 0) - paid;
+                const idx = guests.indexOf(g);
+                return `<tr class="border-b border-gray-800 hover:bg-white/5 transition"><td class="p-3 text-amber-500 font-black">${g.award || '-'}</td><td>${g.name}<br><span class="text-gray-600 font-mono text-[9px]">${g.id}</span></td><td><span class="text-[10px] text-gray-400 uppercase border border-gray-700 px-1 rounded">${g.type}</span></td><td class="text-center font-bold text-white">${g.table || '-'}</td><td class="text-right text-gray-400">${parseFloat(g.total||0).toLocaleString()}</td><td class="text-right ${bal > 0 ? 'text-red-500' : 'text-green-500'} font-black">${bal.toLocaleString()}</td><td class="text-right"><button onclick="window.editGuest(${idx})" class="text-blue-400 mr-2 hover:text-white">✏️</button><button onclick="window.deleteGuest('${g.id}')" class="text-red-600 hover:text-white">🗑️</button></td></tr>`;
+            }).join('');
+        };
+
+        window.renderFinance = () => {
+            const q = document.getElementById('finSearch').value.toLowerCase();
+            const d = document.getElementById('finDate').value;
+            const list = guests.filter(g => {
+                const matchQ = cleanName(g.name).toLowerCase().includes(q) || g.id.includes(q) || (g.ref || '').toLowerCase().includes(q);
+                let matchD = true;
+                if(d) {
+                    const cDate = g.created ? g.created.split('T')[0] : "";
+                    const pDates = (g.payments || []).map(p => p.time.split('T')[0]);
+                    matchD = (cDate === d || pDates.includes(d));
+                }
+                return matchQ && matchD;
+            });
+            let tIn = 0, tDebt = 0, tComm = 0;
+            document.getElementById('finTableBody').innerHTML = list.map(g => {
+                const paid = getPaidSum(g.payments); const bal = (parseFloat(g.total || 0) - paid); const comm = (parseFloat(g.comm || 0));
+                tIn += paid; tDebt += bal; tComm += comm;
+                return `<tr class="border-b border-gray-800 hover:bg-blue-900/10 transition"><td class="p-3 font-mono text-gray-400">${g.id}</td><td class="p-3 font-bold text-white">${g.name}</td><td class="p-3 uppercase text-[10px] text-gray-500">${g.type}</td><td class="p-3 text-right text-gray-400">${parseFloat(g.total||0).toLocaleString()}</td><td class="p-3 text-right text-green-400 font-bold">${paid.toLocaleString()}</td><td class="p-3 text-right text-red-500 font-bold">${bal.toLocaleString()}</td><td class="p-3 text-amber-200">${g.ref || '-'}</td><td class="p-3 text-right text-amber-500 font-mono">${comm.toLocaleString()}</td></tr>`;
+            }).join('');
+            document.getElementById('sumIncome').innerText = tIn.toLocaleString();
+            document.getElementById('sumDebt').innerText = tDebt.toLocaleString();
+            document.getElementById('sumComm').innerText = tComm.toLocaleString();
+            document.getElementById('finFooter').innerHTML = `<tr><td colspan="4" class="p-4 text-right text-gray-400 uppercase text-[10px] tracking-widest">Grand Total Summary:</td><td class="p-4 text-right text-green-400 text-lg">${tIn.toLocaleString()}</td><td class="p-4 text-right text-red-500 text-lg">${tDebt.toLocaleString()}</td><td class="p-4 text-right text-gray-400 uppercase text-[10px]">Total Comm:</td><td class="p-4 text-right text-amber-500 text-lg">${tComm.toLocaleString()}</td></tr>`;
+        };
+
+        window.openPayModal = () => document.getElementById('payModal').classList.remove('hidden');
+        window.confirmLedgerPayment = () => {
+            const amt = parseFloat(document.getElementById('payAmountInput').value);
+            if(!amt) return;
+            tempPayments.push({ amt, time: new Date().toISOString() });
+            window.updateAdminLedger();
+            document.getElementById('payModal').classList.add('hidden');
+            document.getElementById('payAmountInput').value = "";
+        };
+        window.updateAdminLedger = () => {
+            const paid = getPaidSum(tempPayments);
+            document.getElementById('admPaidVal').innerText = paid.toLocaleString();
+            const total = parseFloat(document.getElementById('admTotal').value || 0);
+            document.getElementById('admBalVal').innerText = (total - paid).toLocaleString();
+            document.getElementById('admHistoryList').innerHTML = tempPayments.map((p,i) => `<div class="flex justify-between text-[10px] bg-black/50 p-1.5 rounded mb-1 border border-gray-800"><span class="text-green-500 font-mono">+${p.amt.toLocaleString()}</span><span class="text-gray-500">${new Date(p.time).toLocaleDateString()}</span><button onclick="tempPayments.splice(${i},1);window.updateAdminLedger()" class="text-red-500 hover:text-white">×</button></div>`).join('');
+        };
+        window.editGuest = (idx) => {
+            const g = guests[idx]; document.getElementById('editIdx').value = idx;
+            document.getElementById('admName').value = g.name; document.getElementById('admId').value = g.id;
+            document.getElementById('admType').value = g.type; document.getElementById('admAward').value = g.award;
+            document.getElementById('admTable').value = g.table; document.getElementById('admTotal').value = g.total;
+            document.getElementById('admRef').value = g.ref || ""; document.getElementById('admComm').value = g.comm || 0;
+            tempPayments = [...(g.payments || [])]; window.updateAdminLedger();
+        };
+        window.deleteGuest = (id) => { 
+            Popup.fire({ title: 'ลบข้อมูลถาวร?', text: "ไม่สามารถกู้คืนได้!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Yes, delete it!' }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteDoc(doc(guestCol, id))
+                        .then(() => Toast.fire({ icon: 'success', title: 'Deleted!' }))
+                        .catch(e => Popup.fire({ icon: 'error', title: 'Error', text: e.message }));
+                }
+            });
+        };
+        window.resetForm = () => { 
+            document.getElementById('editIdx').value="-1"; 
+            document.getElementById('admName').value=""; 
+            document.getElementById('admId').value=""; 
+            document.getElementById('admAward').value=""; 
+            document.getElementById('admTable').value=""; 
+            document.getElementById('admRef').value=""; 
+            document.getElementById('admComm').value=""; 
+            document.getElementById('admTotal').value=""; 
+            tempPayments=[]; 
+            window.updateAdminLedger(); 
+        };
+        window.printCurrentView = () => {
+            const content = document.getElementById('guestTableBody').innerHTML;
+            document.getElementById('printArea').innerHTML = `<h2 style="text-align:center">รายชื่อแขก (Guest List View)</h2><table><thead><tr><th>Queue</th><th>Name/ID</th><th>Type</th><th>Table</th><th>Total</th><th>Bal</th><th>Action</th></tr></thead><tbody>${content}</tbody></table>`;
+            window.print();
+        };
+        window.printFinReport = () => {
+            const body = document.getElementById('finTableBody').innerHTML; const footer = document.getElementById('finFooter').innerHTML;
+            document.getElementById('printArea').innerHTML = `<div style="text-align:center; padding:20px; font-family:sans-serif;"><h1 style="margin:0">PRAJKRU 2026 - FINANCIAL STATEMENT</h1><p style="font-size:12px; color:#555;">Generated on: ${new Date().toLocaleString('th-TH')}</p></div><table style="width:100%; border-collapse:collapse; font-size:11px; font-family:sans-serif;"><thead><tr style="background:#eee;"><th style="border:1px solid #000; padding:5px;">ID</th><th>Name</th><th>Type</th><th>Total</th><th>Paid</th><th>Balance</th><th>Referrer</th><th>Comm</th></tr></thead><tbody>${body}</tbody><tfoot>${footer}</tfoot></table>`;
+            window.print();
+        };
+
+        window.importBulk = async () => {
+            const t = document.getElementById('bulkInput').value.trim();
+            if(!t) return;
+            const lines = t.split('\n');
+            const batch = writeBatch(db);
+            let count = 0;
+
+            lines.forEach(line => {
+                const [name, id, type, total, paid, award, table, ref, comm] = line.split('|').map(s=>s?s.trim():"");
+                let autoQ = award || '';
+                if(name && id) {
+                    if(autoQ && !isNaN(autoQ)) { if(type === 'VIP') autoQ = 'V-' + autoQ; else if(type === 'ทั่วไป') autoQ = 'G-' + autoQ; }
+                    const data = { 
+                        name, id, type: type||'ทั่วไป', total:parseFloat(total||0), 
+                        payments:paid?[{amt:parseFloat(paid),time:new Date().toISOString()}]:[], 
+                        award:autoQ, table:table||'', ref:ref||'', comm:parseFloat(comm||0), 
+                        created:new Date().toISOString(), checkIn:false 
+                    };
+                    batch.set(doc(guestCol, id), data);
+                    count++;
+                }
+            });
+
+            if(count > 0) {
+                try {
+                    await batch.commit();
+                    Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${count} รายการเรียบร้อย` });
+                    document.getElementById('bulkInput').value = "";
+                } catch(e) { Popup.fire({ icon: 'error', title: 'Batch Error', text: e.message }); }
+            }
+        };
+
+        // NEW: EXCEL IMPORT
+        window.processExcelFile = async (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (json.length === 0) {
+                        Popup.fire({ icon: 'warning', title: 'Empty File', text: 'ไม่พบข้อมูลในไฟล์' });
+                        return;
+                    }
+
+                    const { isConfirmed } = await Popup.fire({
+                        title: 'Import Excel?',
+                        text: `พบข้อมูล ${json.length} รายการ`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Import',
+                        confirmButtonColor: '#10b981',
+                        background: '#222',
+                        color: '#fff'
+                    });
+
+                    if (!isConfirmed) {
+                        input.value = '';
+                        return;
+                    }
+
+                    const batch = writeBatch(db);
+                    let count = 0;
+
+                    json.forEach(row => {
+                        const getVal = (key) => {
+                            const foundKey = Object.keys(row).find(k => k.toLowerCase().trim() === key.toLowerCase());
+                            return foundKey ? row[foundKey] : '';
+                        };
+
+                        const name = getVal('Name') || getVal('ชื่อ') || getVal('ชื่อ-นามสกุล');
+                        const id = getVal('ID') || getVal('รหัส');
+                        
+                        if (name && id) {
+                            const type = getVal('Type') || getVal('ประเภท') || 'ทั่วไป';
+                            let autoQ = getVal('Queue') || getVal('คิว') || '';
+                            // Auto prefix logic
+                            if(autoQ && !isNaN(autoQ)) { 
+                                if(type === 'VIP') autoQ = 'V-' + autoQ; 
+                                else if(type === 'ทั่วไป') autoQ = 'G-' + autoQ; 
+                            }
+
+                            const data = {
+                                name: String(name).trim(),
+                                id: String(id).trim(),
+                                type: type,
+                                award: String(autoQ),
+                                table: String(getVal('Table') || getVal('โต๊ะ') || ''),
+                                total: parseFloat(getVal('Total') || getVal('ยอดรวม') || 0),
+                                payments: getVal('Paid') ? [{amt: parseFloat(getVal('Paid')), time: new Date().toISOString()}] : [],
+                                ref: String(getVal('Referrer') || getVal('ผู้แนะนำ') || ''),
+                                comm: parseFloat(getVal('Commission') || getVal('Commission') || getVal('ค่าแนะนำ') || 0),
+                                created: new Date().toISOString(),
+                                checkIn: false
+                            };
+                            
+                            // Check existing CheckIn status if re-importing
+                            const checkInStatus = getVal('CheckIn');
+                            if (checkInStatus === 'Yes' || checkInStatus === true || checkInStatus === 'TRUE' || checkInStatus === 'yes') {
+                                data.checkIn = true;
+                                data.inTime = getVal('Time') || new Date().toLocaleString('th-TH');
+                            }
+
+                            batch.set(doc(guestCol, String(id).trim()), data);
+                            count++;
+                        }
+                    });
+
+                    if (count > 0) {
+                        await batch.commit();
+                        Popup.fire({ icon: 'success', title: 'Import Complete', text: `นำเข้า ${count} รายการเรียบร้อย` });
+                    } else {
+                        Popup.fire({ icon: 'warning', title: 'No Valid Data', text: 'ไม่พบข้อมูลที่มี Name และ ID ครบถ้วน' });
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    Popup.fire({ icon: 'error', title: 'Import Failed', text: e.message });
+                } finally {
+                    input.value = '';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        window.exportToExcel = () => {
+            if (!guests || guests.length === 0) return Popup.fire({ icon: 'info', title: 'No Data', text: 'ไม่มีข้อมูลให้ส่งออก' });
+
+            // Header
+            let csv = "Name,ID,Type,Queue,Table,Total,Paid,Balance,CheckIn,Time,Referrer,Commission\n";
+
+            guests.forEach(g => {
+                const paid = (g.payments || []).reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+                const bal = (parseFloat(g.total || 0) - paid);
+                const checkInStatus = g.checkIn ? "Yes" : "No";
+                const time = g.inTime || "-";
+                
+                // Helper to escape CSV special characters
+                const esc = (t) => `"${String(t || "").replace(/"/g, '""')}"`;
+
+                const row = [
+                    esc(g.name),
+                    esc(g.id),
+                    esc(g.type),
+                    esc(g.award),
+                    esc(g.table),
+                    g.total || 0,
+                    paid,
+                    bal,
+                    checkInStatus,
+                    esc(time),
+                    esc(g.ref),
+                    g.comm || 0
+                ].join(",");
+                csv += row + "\n";
+            });
+
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `PrajKru2026_Export_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.downloadTemplate = () => {
+            const wb = XLSX.utils.book_new();
+            const ws_data = [
+                ["Name", "ID", "Type", "Queue", "Table", "Total", "Paid", "Referrer", "Commission", "CheckIn"],
+                ["ตัวอย่าง ชื่อ-นามสกุล", "1001", "VIP", "V-001", "1", 1000, 1000, "ครูสมศรี", 100, "No"]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
+            XLSX.writeFile(wb, "PrajKru_Import_Template.xlsx");
+        };
+
+        window.hardReset = async () => { 
+            const { value: text } = await Popup.fire({ title: 'HARD RESET', text: "Type 'RESET' to delete all data:", input: 'text', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', });
+            if (text === 'RESET') {
+                // Warning: This only deletes local loaded guests. For full cleanup, backend function is better.
+                // But for client-side, we iterate deletions.
+                const batch = writeBatch(db);
+                guests.forEach(g => batch.delete(doc(guestCol, g.id)));
+                await batch.commit();
+                Toast.fire({ icon: 'success', title: 'All Data Deleted' });
+            }
+        };
+        
+        window.autoRunTable = async () => {
+            let t = 1; 
+            const batch = writeBatch(db);
+            let updated = 0;
+            guests.forEach(g => { 
+                if(!g.table) { 
+                    while(guests.filter(x => parseInt(x.table) === t).length >= 8) t++; 
+                    if(t <= 40) {
+                        batch.update(doc(guestCol, g.id), { table: t });
+                        g.table = t; // Optimistic update
+                        updated++;
+                    }
+                } 
+            });
+            if(updated > 0) {
+                await batch.commit();
+                Popup.fire({ icon: 'success', title: 'Auto Seating Complete!' });
+            } else {
+                Toast.fire({ icon: 'info', title: 'No changes needed' });
+            }
+        };
+
+    </script>
+</body>
+</html>
